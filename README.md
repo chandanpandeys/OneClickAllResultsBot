@@ -2,7 +2,7 @@
 
 **OneClickAllResultsBot** is a web scraping solution designed to automate the retrieval of student results from university portals. By encoding roll numbers, the tool securely accesses students' result data. It supports batch processing, allowing results for multiple students to be fetched and displayed in seconds, including details such as marks in individual subjects (if available), total marks, and the final result status. The data is presented in a clear, easy-to-read format for efficient result management.
 
-(**The Bot Currently Works Only for Ram Manohar Lohia Awadh University (RMLAU) Students.**)
+**The Bot Currently Works Only for Ram Manohar Lohia Awadh University (RMLAU) Students.**
 
 ---
 
