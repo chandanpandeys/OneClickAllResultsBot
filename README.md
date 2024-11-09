@@ -28,26 +28,38 @@
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/yourusername/OneClickAllResultsBot.git
+   ```
 
 2. **Install dependencies**:
-  ```bash
-  pip install -r requirements.txt
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 3. **Run the bot**:
-  ```bash
-  python fetch_results.py
+   ```bash
+   python fetch_results.py
+   ```
 
-Customize the bot (optional) to fetch results for other universities or add more features as needed.
+4. **Customize the bot** (optional) to fetch results for other universities or add more features as needed.
 
-###🚀 Get Involved!
+---
+
+### 🚀 Get Involved!
 We are always looking for contributors! If you find this project useful or want to add new features, feel free to fork the repository and submit a pull request. You can also open issues for suggestions or bugs.
 
-Support: If you encounter any issues or have questions, please open an issue, and we’ll get back to you as soon as possible.
+**Support**: If you encounter any issues or have questions, please open an issue, and we’ll get back to you as soon as possible.
 
 ⭐ Star this repo if you found it useful!
 
+---
+
 ### Contact:
-If you have any questions or suggestions, feel free to contact me at humanchandanpandey@gmail.com.
+If you have any questions or suggestions, feel free to contact me at [humanchandanpandey@gmail.com](mailto:humanchandanpandey@gmail.com).
+
+
+
+
+
 
 
 
