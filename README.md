@@ -44,7 +44,6 @@
 
 ---
 
-### 🚀 Get Involved!
 We are always looking for contributors! If you find this project useful or want to add new features, feel free to fork the repository and submit a pull request. You can also open issues for suggestions or bugs.
 
 **Support**: If you encounter any issues or have questions, please open an issue, and we’ll get back to you as soon as possible.
