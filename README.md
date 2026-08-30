@@ -1,64 +1,61 @@
 # OneClickAllResultsBot
 
-**OneClickAllResultsBot** is a web scraping solution designed to automate the retrieval of student results from university portals. By encoding roll numbers, the tool securely accesses students' result data. It supports batch processing, allowing results for multiple students to be fetched and displayed in seconds, including details such as marks in individual subjects (if available), total marks, and the final result status. The data is presented in a clear, easy-to-read format for efficient result management.
+A small Python/BeautifulSoup project that demonstrates how a semester-specific RMLAU result page can be requested and parsed for basic result information.
 
-**The Bot Currently Works Only for Ram Manohar Lohia Awadh University (RMLAU) Students.**
+> **Project history:** originally built in November 2024. Code and documentation refreshed in August 2026 to improve error handling, reproducibility, and project context. The target university page is external and may change independently of this repository.
 
----
+## What it demonstrates
 
-### Features:
-- Takes a range of roll numbers and fetches corresponding student results.
-- Allows batch checking of results for a range of students.
-- Can be extended to handle more data points, such as individual subject marks.
-- Extensible for future feature additions like fetching subject-specific marks or exporting data to CSV/Excel.
-- Provides a clean and organized output for the results.
+- HTTP requests with `requests`
+- Base64 encoding of the roll-number query value expected by the legacy portal
+- HTML parsing with BeautifulSoup
+- Defensive handling of changed/missing page structures
+- Sequential processing with a delay rather than concurrent scraping
 
----
+## Important use note
 
-### Technologies: 
-- Python
-- BeautifulSoup
-- Requests
-- Base64 Encoding
+Result pages contain personal academic information. Use this project only for records you are authorized to access, respect the university portal's terms and rate limits, and do not use it to collect or republish student data without an appropriate basis.
 
----
+## Current scope
 
-### How to Use:
+The URL template in the script points to the historical RMLAU BCA Semester 3 result path used when this project was created. If the university changes its host, semester path, query parameters, or HTML structure, update `RESULT_URL_TEMPLATE` and the parser selectors before use.
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/yourusername/OneClickAllResultsBot.git
-   ```
+## Setup
 
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+git clone https://github.com/chandanpandeys/OneClickAllResultsBot.git
+cd OneClickAllResultsBot
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python OneClickAllResultBot.py
+```
 
-3. **Run the bot**:
-   ```bash
-   python fetch_results.py
-   ```
+The program asks for:
 
-4. **Customize the bot** (optional) to fetch results for other universities or add more features as needed.
+1. the first roll number, and
+2. the number of students in the small authorized range you want to check.
 
----
+Requests are performed sequentially with a short delay. There is intentionally no concurrency or bulk-export feature.
 
-We are always looking for contributors! If you find this project useful or want to add new features, feel free to fork the repository and submit a pull request. You can also open issues for suggestions or bugs.
+## Improvements in the 2026 refresh
 
-**Support**: If you encounter any issues or have questions, please open an issue, and we’ll get back to you as soon as possible.
+- Fixed an unsafe parser check that could access the 10th table cell without first confirming it existed
+- Added request timeout and HTTP-error handling
+- Reused a `requests.Session`
+- Added basic input validation
+- Added a `__main__` guard so the module can be imported safely
+- Added a conservative delay between sequential requests
+- Added the missing `requirements.txt`
+- Corrected setup instructions to reference the actual script name
 
-⭐ Star this repo if you found it useful!
+## Limitations
 
----
+- Portal-specific and semester-specific
+- Relies on HTML selectors owned by an external website
+- Does not attempt CAPTCHA/authentication bypasses
+- Does not guarantee current portal compatibility
 
-### Contact:
-If you have any questions or suggestions, feel free to contact me at [humanchandanpandey@gmail.com](mailto:humanchandanpandey@gmail.com).
+## Status
 
-
-
-
-
-
-
-
+**Legacy educational scraper / maintenance mode.** Useful as a compact parsing and defensive-request example; not presented as a production data-collection service.
