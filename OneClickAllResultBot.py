@@ -1,85 +1,125 @@
-import requests
+"""RMLAU result-page scraper (legacy educational project).
+
+The university page structure and semester-specific URL can change at any time.
+Use this script only for records you are authorized to access and respect the
+portal's terms, rate limits, and privacy requirements.
+"""
+
+from __future__ import annotations
+
 import base64
+import time
+from typing import Any
+
+import requests
 from bs4 import BeautifulSoup
 
+RESULT_URL_TEMPLATE = (
+    "https://result24.rmlauexams.in/Marks_Sheet/BCA_SEM3/print.aspx"
+    "?Roll_no={encoded_roll}&Col=MDEx"
+)
+REQUEST_TIMEOUT_SECONDS = 15
+REQUEST_DELAY_SECONDS = 1.0
 
-def encode_roll_number(roll_number):
-    roll_number_str = str(roll_number)
-    encoded_bytes = base64.b64encode(roll_number_str.encode('utf-8'))
-    encoded_str = encoded_bytes.decode('utf-8')
-    return encoded_str
+
+def encode_roll_number(roll_number: int | str) -> str:
+    """Return the Base64-encoded roll number expected by the legacy portal."""
+    return base64.b64encode(str(roll_number).encode("utf-8")).decode("utf-8")
 
 
-def fetch_result(roll_number):
+def fetch_result(
+    roll_number: int,
+    *,
+    session: requests.Session | None = None,
+    timeout: int = REQUEST_TIMEOUT_SECONDS,
+) -> dict[str, Any] | None:
+    """Fetch and parse one result page.
+
+    Returns a dictionary when the expected result structure is present and
+    ``None`` when the page cannot be fetched or does not match the known
+    layout. The parser is intentionally defensive because the portal markup
+    has changed historically.
+    """
+    client = session or requests.Session()
     encoded_roll = encode_roll_number(roll_number)
-    url = f"https://result24.rmlauexams.in/Marks_Sheet/BCA_SEM3/print.aspx?Roll_no={encoded_roll}&Col=MDEx"
-    response = requests.get(url)
+    url = RESULT_URL_TEMPLATE.format(encoded_roll=encoded_roll)
 
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.content, 'html.parser')
+    try:
+        response = client.get(
+            url,
+            timeout=timeout,
+            headers={"User-Agent": "OneClickAllResultsBot/legacy-demo"},
+        )
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        print(f"Could not fetch roll number {roll_number}: {exc}")
+        return None
 
-        student_info = {}
-        info_table = soup.find_all('td', class_='td-btom')
-        if len(info_table) > 2:
-            student_info['Name'] = info_table[2].text.strip()
-            student_info['Roll no.'] = info_table[9].text.strip()
-        else:
-            return f'Result for Roll no. {roll_number} Not Found.\n'
+    soup = BeautifulSoup(response.content, "html.parser")
+    info_cells = soup.find_all("td", class_="td-btom")
 
-        marks = {}
+    # The historical layout stores the name at index 2 and roll number at 9.
+    # Check the actual required index before reading it.
+    if len(info_cells) <= 9:
+        print(f"Result for roll number {roll_number} was not found or the page layout changed.")
+        return None
 
-        # Uncomment and correctly parse the subject marks here if needed
-        # subjects_table = soup.find_all('td', class_='mrk')
-        # marks['Java'] = subjects_table[7].text.strip()
-        # marks['OS'] = subjects_table[15].text.strip()
-        # marks['CN'] = subjects_table[23].text.strip()
-        # marks['Android'] = subjects_table[31].text.strip()
-        # marks['Stats'] = subjects_table[39].text.strip()
-        # marks['Prac. Java'] = subjects_table[46].text.strip()
-        # marks['Prac. OS'] = subjects_table[54].text.strip()
+    mark_cells = soup.find_all("td", class_="mrk")
+    total_marks = mark_cells[-1].get_text(strip=True) if mark_cells else "N/A"
 
-        # Fetch total marks
-        total_marks = soup.find_all('td', class_='mrk')
-        if total_marks:
-            marks['Total Marks'] = total_marks[-1].text.strip()  # Assuming the last element is the total
+    status_cell = soup.find("td", class_="mrk br1-rt", colspan="5")
+    status_node = status_cell.find("b") if status_cell else None
+    status = status_node.get_text(strip=True) if status_node else "Status not found"
 
-        # Fetch result status
-        status_table = soup.find('td', class_='mrk br1-rt', colspan='5')
-        if status_table:
-            status = status_table.find('b').text.strip() if status_table.find('b') else "Status not found"
-        else:
-            status = "Status not found"
-
-        result_info = {
-            'Name': student_info['Name'],
-            'Roll no': student_info['Roll no.'],
-            'Total Marks': marks.get('Total Marks', 'N/A'),
-            'Result Status': status
-        }
-
-        return result_info
-    else:
-        return f"Failed to fetch result for roll number {roll_number}"
+    return {
+        "Name": info_cells[2].get_text(strip=True),
+        "Roll no": info_cells[9].get_text(strip=True),
+        "Total Marks": total_marks,
+        "Result Status": status,
+    }
 
 
-def check_results_in_range(start_roll_number, end_roll_number):
-    results = {}
-    for roll_number in range(start_roll_number, end_roll_number + 1):
-        result = fetch_result(roll_number)
-        if isinstance(result, dict):
-            print(f"Name: {result['Name']}")
-            print(f"Roll no: {result['Roll no']}")
-            print(f"Total Marks: {result['Total Marks']}")
-            print(f"Result Status: {result['Result Status']}")
-            print()  # Adding a blank line for readability
-            results[roll_number] = result
-        else:
-            print(result)
+def check_results_in_range(
+    start_roll_number: int,
+    end_roll_number: int,
+    *,
+    delay_seconds: float = REQUEST_DELAY_SECONDS,
+) -> dict[int, dict[str, Any]]:
+    """Sequentially fetch a small authorized range without concurrency."""
+    if end_roll_number < start_roll_number:
+        raise ValueError("end_roll_number must be greater than or equal to start_roll_number")
+
+    results: dict[int, dict[str, Any]] = {}
+    with requests.Session() as session:
+        for index, roll_number in enumerate(range(start_roll_number, end_roll_number + 1)):
+            result = fetch_result(roll_number, session=session)
+            if result:
+                print(f"Name: {result['Name']}")
+                print(f"Roll no: {result['Roll no']}")
+                print(f"Total Marks: {result['Total Marks']}")
+                print(f"Result Status: {result['Result Status']}\n")
+                results[roll_number] = result
+
+            if index < end_roll_number - start_roll_number and delay_seconds > 0:
+                time.sleep(delay_seconds)
+
     return results
 
 
-# Example usage
-start_roll_number = int(input("Enter First Roll Number: "))
-number_of_students_in_class = int(input("Enter Number of Students: "))
-end_roll_number = start_roll_number + number_of_students_in_class - 1
-results = check_results_in_range(start_roll_number, end_roll_number)
+def main() -> None:
+    """Run the original interactive workflow with basic input validation."""
+    try:
+        start_roll_number = int(input("Enter first roll number: ").strip())
+        number_of_students = int(input("Enter number of students: ").strip())
+    except ValueError:
+        raise SystemExit("Roll number and number of students must be integers.")
+
+    if number_of_students <= 0:
+        raise SystemExit("Number of students must be greater than zero.")
+
+    end_roll_number = start_roll_number + number_of_students - 1
+    check_results_in_range(start_roll_number, end_roll_number)
+
+
+if __name__ == "__main__":
+    main()
